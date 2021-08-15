@@ -1,0 +1,15 @@
+{
+    "batch_size": 5,
+    "iters": 200000,
+    "device": "cuda",
+    "lr": 8e-5,
+    "lr_decay": 0.99999,
+    "decay_after": 500,
+    "save_checkpoint_interval": 1000,
+    "img_generated_interval": 100,
+    "log_generated_interval": 20,
+    "style_weight": 5.0,
+    "content_weight": 1.0,
+    "identity1_weight": 50.0,
+    "identity2_weight": 1.0
+}

@@ -131,3 +131,8 @@ dmypy.json
 #folders
 style
 content
+loss_save
+model_save/*
+!model_save/vgg_normalised.pth
+samples
+custom_style

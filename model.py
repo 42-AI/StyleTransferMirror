@@ -2,14 +2,13 @@ from torch.functional import norm
 import torch.nn as nn
 import torch
 from torch.nn.modules import loss
+import torchvision
+from torchvision.transforms.functional import invert
 
 from utils import normalize
 from utils import mean_std
 
 decoder = nn.Sequential(
-    nn.ReflectionPad2d((1, 1, 1, 1)),
-    nn.Conv2d(512, 512, (3, 3)),
-    nn.ReLU(),
     nn.ReflectionPad2d((1, 1, 1, 1)),
     nn.Conv2d(512, 256, (3, 3)),
     nn.ReLU(),
@@ -31,12 +30,6 @@ decoder = nn.Sequential(
     nn.Conv2d(128, 128, (3, 3)),
     nn.ReLU(),
     nn.ReflectionPad2d((1, 1, 1, 1)),
-    nn.Conv2d(128, 128, (3, 3)),
-    nn.ReLU(),
-    nn.ReflectionPad2d((1, 1, 1, 1)),
-    nn.Conv2d(128, 128, (3, 3)),
-    nn.ReLU(),
-    nn.ReflectionPad2d((1, 1, 1, 1)),
     nn.Conv2d(128, 64, (3, 3)),
     nn.ReLU(),
     nn.Upsample(scale_factor=2, mode='nearest'),
@@ -44,14 +37,7 @@ decoder = nn.Sequential(
     nn.Conv2d(64, 64, (3, 3)),
     nn.ReLU(),
     nn.ReflectionPad2d((1, 1, 1, 1)),
-    nn.Conv2d(64, 32, (3, 3)),
-    nn.ReLU(),
-    nn.ReflectionPad2d((1, 1, 1, 1)),
-    nn.Conv2d(32, 16, (3, 3)),
-    nn.ReLU(),
-    nn.ReflectionPad2d((1, 1, 1, 1)),
-    nn.Conv2d(16, 3, (3, 3)),
-    nn.ReLU(),
+    nn.Conv2d(64, 3, (3, 3)),
 )
 
 vgg = nn.Sequential(
@@ -138,17 +124,17 @@ class SelfAttentionModule(nn.Module):
     def __init__(self, in_channel : int):
         super(SelfAttentionModule, self).__init__()
 
-        self.SANet1 = SANet(in_channel)
-        self.SANet2 = SANet(in_channel)
+        self.SAN1 = SANet(in_channel)
+        self.SAN2 = SANet(in_channel)
 
-        self.upsample = nn.Upsample(scale_factor=2, mode='nearest')
+        self.upsample = nn.Upsample(scale_factor=2, mode='nearest') 
         self.merge_conv_pad = nn.ReflectionPad2d((1, 1, 1, 1))
         self.merge_conv = nn.Conv2d(in_channel, in_channel, (3, 3))
 
     def forward(self, Fc : torch.Tensor, Fs : torch.Tensor):
-        Fcsc_5 = self.SANet1(Fc[-1], Fs[-1])
+        Fcsc_5 = self.SAN1(Fc[-1], Fs[-1])
         Fcsc_5_up = self.upsample(Fcsc_5)
-        Fcsc_4 = self.SANet1(Fc[-2], Fs[-2])
+        Fcsc_4 = self.SAN2(Fc[-2], Fs[-2])
         Fcsc_m = Fcsc_4 + Fcsc_5_up
         Fcsc_m = self.merge_conv_pad(Fcsc_m)
         Fcsc_m = self.merge_conv(Fcsc_m)
@@ -176,7 +162,7 @@ class MultiLevelStyleAttention(nn.Module):
         for n in ['enc_1', 'enc_2', 'enc_3', 'enc_4', 'enc_5']:
             for param in getattr(self, n).parameters():
                 param.requires_grad = False
-    
+
     def get_encoder_features(self, x : torch.Tensor):
         '''
         x : batch of images
@@ -196,16 +182,20 @@ class MultiLevelStyleAttention(nn.Module):
     def style_loss(self, _input : torch.Tensor, _target : torch.Tensor):
         assert (_input.size() == _target.size())
         assert (_target.requires_grad is False)
-        _input_mean, _input_std = mean_std()
-        _target_mean, _target_std = mean_std()
+        _input_mean, _input_std = mean_std(_input)
+        _target_mean, _target_std = mean_std(_target)
         return self.mse_loss(_input_mean, _target_mean) \
              + self.mse_loss(_input_std, _target_std)
 
-    def forward(self, Ic, Is):
+    def forward(self, Ic : torch.Tensor, Is : torch.Tensor, train : bool = True):
         Fs = self.get_encoder_features(Is)
         Fc = self.get_encoder_features(Ic)
-        
+
         Ics = self.decoder(self.sa_module(Fc, Fs))
+
+        if not train:
+            return Ics
+
         Ics_feats = self.get_encoder_features(Ics)
 
         # Content loss
@@ -217,13 +207,14 @@ class MultiLevelStyleAttention(nn.Module):
 
         Icc = self.decoder(self.sa_module(Fc, Fc))
         Iss = self.decoder(self.sa_module(Fs, Fs))
+
         Icc_feats = self.get_encoder_features(Icc)
         Iss_feats = self.get_encoder_features(Iss)
 
-        # identity1
+        # identity1 loss
         loss_lambda1 = self.content_loss(Icc, Ic) + self.content_loss(Iss, Is)
 
-        # identity2
+        # identity2 loss
         loss_lambda2 = sum([self.content_loss(Icc_feats[i], Fc[i]) + self.content_loss(Iss_feats[i], Fs[i]) for i in range(5)])
 
         return Lc, Ls, loss_lambda1, loss_lambda2
