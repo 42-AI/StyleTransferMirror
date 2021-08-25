@@ -5,4 +5,19 @@ This work will be based on this paper :
 
 [*Arbitrary Style Transfer with Style-Attentional Networks*](https://arxiv.org/pdf/1812.02342.pdf)
 
-to train with the same data as the pretrain network, or to train more, unzip `wikiart.zip` and `train2017.zip`. Move the images to the folders, respectively, `style` and `content`
+---
+
+To train with the same data as the pretrain network, or to train more,
+```
+sh download_utils.sh
+```
+and download the pretrain weight at this adresse :
+https://drive.google.com/file/d/1_pkMt3NSJftkoYUekNJkPV1IJuQZdfj6/view?usp=sharing
+
+Put this weight on the `model_save` folder.
+
+Then unzip `wikiart.zip` and `train2017.zip`. 
+
+Move the images to the folders, respectively, `style` and `content`
+
+Finally use the `train.ipynb`
