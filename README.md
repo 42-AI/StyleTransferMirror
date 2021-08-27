@@ -5,6 +5,9 @@ This work will be based on this paper :
 
 [*Arbitrary Style Transfer with Style-Attentional Networks*](https://arxiv.org/pdf/1812.02342.pdf)
 
+Also took some code part from this repo:
+https://github.com/mumair5393/Style-Transfer-with-Style-Attentional-Networks
+
 ---
 
 To train with the same data as the pretrain network, or to train more,
