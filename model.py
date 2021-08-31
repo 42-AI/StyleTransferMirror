@@ -250,8 +250,8 @@ class MultiLevelStyleAttention(nn.Module):
         Ls = sum([self.style_loss(Ics_feats[i], Fs[i]) for i in range(5)])
         # For the result yield by the save 159000.pt i have 
         # finetune for 50000 steps with above line replace by :
-        # Ls = sum([self.style_loss(Ics_feats[i], Fs[i]) for i in range(3)])
-        # By remvoing the last layers of the style images, we remove the 
+        # Ls = sum([self.style_loss(Ics_feats[i], Fs[i]) for i in range(4)])
+        # By remvoing the last layer of the style images, we remove the 
         # style image content leakage on the transfered image.
         # I also added 3 to the style_weight on the config.json to 
         # put more value on the style because the sum will be smaller

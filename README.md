@@ -24,3 +24,9 @@ Then unzip `wikiart.zip` and `train2017.zip`.
 Move the images to the folders, respectively, `style` and `content`
 
 Finally use the `train.ipynb`
+
+------
+
+You can see some results here :
+
+![results](./results.png)
