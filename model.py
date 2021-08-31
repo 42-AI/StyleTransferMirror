@@ -248,6 +248,13 @@ class MultiLevelStyleAttention(nn.Module):
         # the style can be extract from all the layers 
         # (even there is more style value on the first layers)
         Ls = sum([self.style_loss(Ics_feats[i], Fs[i]) for i in range(5)])
+        # For the result yield by the save 159000.pt i have 
+        # finetune for 50000 steps with above line replace by :
+        # Ls = sum([self.style_loss(Ics_feats[i], Fs[i]) for i in range(3)])
+        # By remvoing the last layers of the style images, we remove the 
+        # style image content leakage on the transfered image.
+        # I also added 3 to the style_weight on the config.json to 
+        # put more value on the style because the sum will be smaller
 
         # Then the styled images with both same style and both same content
         Icc = self.decoder(self.sa_module(Fc, Fc))
