@@ -15,7 +15,7 @@ To train with the same data as the pretrain network, or to train more,
 sh download_utils.sh
 ```
 and download the pretrain weight at this adresse :
-https://drive.google.com/file/d/1u-uxmA5BvPPLK1LaKT8XXPRnzCRF_G55/view?usp=sharing
+https://drive.google.com/file/d/1Yd6FSHbEDzzZB8on9xJe7dSC8omOG6OE/view?usp=sharing
 
 Put this weight on the `model_save` folder.
 
