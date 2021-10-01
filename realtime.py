@@ -29,20 +29,6 @@ class DevEnvironment():
 
         self.batch_size = config["batch_size"] if "batch_size" in config else 32
 
-        # The path for the style and content folders
-        self.style_path = config["style_path"] if "style_path" in config else "E:\\projects\\42AI\\StyleTransferMirror\\style"
-        self.content_path = config["content_path"] if "content_path" in config else "E:\\projects\\42AI\\StyleTransferMirror\\content"
-
-        # Here we load the FlatFolderDataset in a dataload
-        # And then wrap it in an infinite loader
-        self._style_dataset = FlatFolderDataset(self.style_path)
-        style_dataloader = torch.utils.data.DataLoader(self._style_dataset, batch_size = self.batch_size, shuffle=True, drop_last=True, pin_memory=True)
-        self.style_loader = utils.infinite_loader(style_dataloader)
-
-        self._content_dataset = FlatFolderDataset(self.content_path)
-        content_dataloader = torch.utils.data.DataLoader(self._content_dataset, batch_size = self.batch_size, shuffle=True, drop_last=True, pin_memory=True)
-        self.content_loader = utils.infinite_loader(content_dataloader)
-
         # This is the device used for training
         self.device = torch.device(config["device"]) if "device" in config else torch.device("cuda")
 
@@ -104,8 +90,6 @@ if start_iteration != 0:
 # Use custom style folder to display sample data
 custom_style_dataset = FlatFolderDataset("custom_style/")
 
-style = torch.unsqueeze(custom_style_dataset.__getitem__(4, False), 0).to(env.device)
-
 def camera_feed():
     cap = cv2.VideoCapture(0)
 
@@ -115,28 +99,36 @@ def camera_feed():
     cap.set(3, 1280)
     cap.set(4, 720)
 
-    while(True):
-        utils.clean()
+    with torch.cuda.amp.autocast() and torch.no_grad():
+        style_len = len(custom_style_dataset)
+        style_index = 0
+        style = torch.unsqueeze(custom_style_dataset.__getitem__(style_index, False), 0).to(env.device)
 
-        # Capture frame-by-frame
-        ret, frame = cap.read()
-        frame = Image.fromarray(frame)
+        while(True):
+            utils.clean()
 
-        frame = torch.unsqueeze(env._content_dataset.transform_test(frame), 0).to(env.device)
+            # Capture frame-by-frame
+            ret, frame = cap.read()
 
-        with torch.cuda.amp.autocast() and torch.no_grad():
-            # Getting the stylized images
-            frame = env.network(frame, style, train=False)
+            # Display the resulting frame
+            cv2.imshow('preview', cv2.resize(cv2.cvtColor(np.moveaxis(env.network(torch.unsqueeze(custom_style_dataset.transform_test(Image.fromarray(frame)), 0).to(env.device), style, train=False)[0].cpu().detach().numpy(), (0, 2, 1), (2, 1, 0)), cv2.COLOR_BGR2RGB), (0, 0), fx=1.5, fy=1.5))
 
-        frame = cv2.cvtColor(np.moveaxis(frame[0].cpu().detach().numpy(), (0, 2, 1), (2, 1, 0)), cv2.COLOR_BGR2RGB)
-
-        print(frame.shape)
-        # Display the resulting frame
-        cv2.imshow('preview', frame)
-
-        #Waits for a user input to quit the application
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            k = cv2.waitKey(33)
+            #Waits for a user input to quit the application
+            if k == ord('q'):
+                break
+            elif k == ord('a'):
+                if (style_index - 1 >= 0):
+                    style_index -= 1
+                else:
+                    style_index = style_len - 1
+                style = torch.unsqueeze(custom_style_dataset.__getitem__(style_index, False), 0).to(env.device)
+            elif k == ord('z'):
+                if (style_index + 1 < style_len):
+                    style_index += 1
+                else:
+                    style_index = 0
+                style = torch.unsqueeze(custom_style_dataset.__getitem__(style_index, False), 0).to(env.device)
     
     cap.release()
     cv2.destroyAllWindows()
