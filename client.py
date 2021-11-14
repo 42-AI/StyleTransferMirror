@@ -2,6 +2,8 @@ import time
 import cv2
 from threading import Thread
 import torch
+import torch.distributed as dist
+import os
 
 FPS = 16
 BATCH_PER_SEC = 2
@@ -62,10 +64,14 @@ class VideoProcess:
         return self
 
     def process(self):
+        os.environ['MASTER_ADDR'] = '127.0.0.1'
+        os.environ['MASTER_PORT'] = '29500'
+        dist.init_process_group('gloo', rank=1, world_size=2)
         while not self.stopped:
             if len(self.to_process):
                 # Do process here
-                self.processed.append(self.to_process[0])
+                _tensor = torch.tensor(self.to_process[0])
+                self.processed.append(_tensor.detach().numpy())
                 self.to_process = self.to_process[1:]
 
     def stop(self):
