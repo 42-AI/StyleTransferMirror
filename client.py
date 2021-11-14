@@ -148,10 +148,10 @@ while True:
                 break
             video_shower.frame = frame
             time_slide += (time.time_ns() - a) * 1e-9
-            if time_slide < 1/(FPS-2):
-                time.sleep(1/(FPS-2) - time_slide)
+            if time_slide < 1/FPS:
+                time.sleep(1/FPS - time_slide)
                 time_slide = 0
             else:
-                time_slide -= 1/(FPS-2)
+                time_slide -= 1/FPS
             reset_each_c -= 1
             a = time.time_ns()
