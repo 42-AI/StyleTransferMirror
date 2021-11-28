@@ -74,8 +74,8 @@ style_len = len(custom_style_dataset)
 style_index = 0
 
 with torch.cuda.amp.autocast() and torch.no_grad():
-    style = torch.cat([torch.unsqueeze(custom_style_dataset.__getitem__(2, False), 0) for _ in range(4)]).to(env.device)
-    _tensor = torch.zeros((4, 3, 512, 512))
+    style = torch.cat([torch.unsqueeze(custom_style_dataset.__getitem__(1, False), 0) for _ in range(6)]).to(env.device)
+    _tensor = torch.zeros((6, 3, 256, 256))
     while True:
         dist.recv(_tensor, 0)
         _out = env.network(_tensor.to(env.device), style, train=False)

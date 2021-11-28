@@ -10,7 +10,7 @@ from utils import FlatFolderDataset
 from PIL import Image
 import numpy as np
 
-FPS = 8
+FPS = 12
 BATCH_PER_SEC = 2
 
 class VideoGet:
@@ -63,7 +63,7 @@ class VideoProcess:
         self.to_process = []
         self.processed = []
         # Just for transforms
-        self.dataset = FlatFolderDataset("custom_style/")
+        self.dataset = FlatFolderDataset("custom_style/", 256)
 
 
     def start(self):    
@@ -103,7 +103,7 @@ class VideoShow:
 
     def show(self):
         while not self.stopped:
-            cv2.imshow("Video", self.frame)
+            cv2.imshow("Video", cv2.resize(self.frame, (0, 0), fx=2, fy=2))
             if cv2.waitKey(1) == ord("q"):
                 self.stopped = True
 
@@ -116,7 +116,7 @@ video_shower = VideoShow(video_getter.frame).start()
 video_processer = VideoProcess().start()
 
 reset_each = 1000
-reset_each_c = reset_each
+reset_each_c = 20
 
 initial_wait = 3
 
@@ -147,11 +147,11 @@ while True:
             if video_shower.stopped:
                 break
             video_shower.frame = frame
+            reset_each_c -= 1
             time_slide += (time.time_ns() - a) * 1e-9
-            if time_slide < 1/(FPS-2):
-                time.sleep(1/(FPS-2) - time_slide)
+            if time_slide < 1/FPS:
+                time.sleep(1/FPS - time_slide)
                 time_slide = 0
             else:
-                time_slide -= 1/(FPS-2)
-            reset_each_c -= 1
+                time_slide -= 1/FPS
             a = time.time_ns()
