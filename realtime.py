@@ -1,20 +1,15 @@
-from IPython.display import clear_output
 from PIL import Image
-from matplotlib import cm
 
-import torchvision
 import numpy as np
 import torch
 from torch import nn
-from torchvision import transforms
 
 import model
 import utils
 from utils import FlatFolderDataset
+import torch
 
-import matplotlib.pyplot as plt
 
-from tqdm import tqdm
 
 import json
 import cv2
@@ -53,12 +48,6 @@ class DevEnvironment():
         # Total number of training steps to train
         self.iters = config["iters"] if "iters" in config else 200000
 
-        # Setting up the optimizer with all the parameters
-        self.optimizer = torch.optim.Adam([
-            {"params": self.network.decoder.parameters()},
-            {"params": self.network.sa_module.parameters()}
-        ], lr=self.lr)
-
         # Setting up the weights for the loss calculation
         self.style_weight = config["style_weight"] if "style_weight" in config else 5.0
         self.content_weight = config["content_weight"] if "content_weight" in config else 1.0
@@ -77,7 +66,8 @@ class DevEnvironment():
         # Loading the different part of the model separatly
         self.network.decoder.load_state_dict(saved["decoder"], strict=False)
         self.network.sa_module.load_state_dict(saved["sa_module"], strict=False)
-        self.optimizer.load_state_dict(saved["optimizer"])
+
+        self.network = self.network.half()
 
 # Loading the configs in env variable
 env = DevEnvironment("config.json")
@@ -87,8 +77,11 @@ start_iteration = 177000
 if start_iteration != 0:
     env.load_save(f"model_save/{str(start_iteration).zfill(6)}.pt")
 
+
+CONTENT_SIZE = 512
 # Use custom style folder to display sample data
-custom_style_dataset = FlatFolderDataset("custom_style/")
+custom_style_dataset = FlatFolderDataset("custom_style/", 384)
+cam_transform = FlatFolderDataset("custom_style/", CONTENT_SIZE)
 
 def camera_feed():
     cap = cv2.VideoCapture(0)
@@ -99,19 +92,31 @@ def camera_feed():
     cap.set(3, 1280)
     cap.set(4, 720)
 
+    for param in env.network.parameters():
+        param.grad = None
+
+    torch.backends.cudnn.benchmark = True
+
+    cv2.namedWindow("window", cv2.WND_PROP_FULLSCREEN)
+    cv2.setWindowProperty("window",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+
     with torch.cuda.amp.autocast() and torch.no_grad():
         style_len = len(custom_style_dataset)
         style_index = 0
-        style = torch.unsqueeze(custom_style_dataset.__getitem__(style_index, False), 0).to(env.device)
-
+        style = torch.unsqueeze(custom_style_dataset.__getitem__(style_index, False), 0).to(env.device).half()
+        style_np = cv2.resize(cv2.cvtColor(style[0].permute(1, 2, 0).float().cpu().numpy(), cv2.COLOR_BGR2RGB), (CONTENT_SIZE, CONTENT_SIZE))
+        
         while(True):
             utils.clean()
 
             # Capture frame-by-frame
             ret, frame = cap.read()
+            
+            frame = cam_transform.transform_test(Image.fromarray(frame))
+            out = env.network(torch.unsqueeze(frame.to(env.device), 0), style, train=False)
 
             # Display the resulting frame
-            cv2.imshow('preview', cv2.resize(cv2.cvtColor(np.moveaxis(env.network(torch.unsqueeze(custom_style_dataset.transform_test(Image.fromarray(frame)), 0).to(env.device), style, train=False)[0].cpu().detach().numpy(), (0, 2, 1), (2, 1, 0)), cv2.COLOR_BGR2RGB), (0, 0), fx=1.5, fy=1.5))
+            cv2.imshow('window', np.hstack((frame.permute(1, 2, 0).float().numpy(), out[0, [2, 1, 0]].permute(1, 2, 0).float().cpu().numpy(), style_np)))
 
             k = cv2.waitKey(33)
             #Waits for a user input to quit the application
@@ -122,14 +127,17 @@ def camera_feed():
                     style_index -= 1
                 else:
                     style_index = style_len - 1
-                style = torch.unsqueeze(custom_style_dataset.__getitem__(style_index, False), 0).to(env.device)
-            elif k == ord('z'):
+                style = torch.unsqueeze(custom_style_dataset.__getitem__(style_index, False), 0).to(env.device).half()
+                style_np = cv2.resize(cv2.cvtColor(style[0].permute(1, 2, 0).float().cpu().numpy(), cv2.COLOR_BGR2RGB), (CONTENT_SIZE, CONTENT_SIZE), fx=2.5, fy=2.5)
+
+            elif k == ord('d'):
                 if (style_index + 1 < style_len):
                     style_index += 1
                 else:
                     style_index = 0
-                style = torch.unsqueeze(custom_style_dataset.__getitem__(style_index, False), 0).to(env.device)
-    
+                style = torch.unsqueeze(custom_style_dataset.__getitem__(style_index, False), 0).to(env.device).half()
+                style_np = cv2.resize(cv2.cvtColor(style[0].permute(1, 2, 0).float().cpu().numpy(), cv2.COLOR_BGR2RGB), (CONTENT_SIZE, CONTENT_SIZE), fx=2.5, fy=2.5)
+
     cap.release()
     cv2.destroyAllWindows()
 

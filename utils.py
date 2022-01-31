@@ -8,8 +8,6 @@ from PIL import Image
 
 import gc
 
-eps = 1e-5
-
 def mean_std(X : torch.Tensor):
     size = X.size()
 
@@ -24,7 +22,7 @@ def mean_std(X : torch.Tensor):
     X = X.view(Bs, C, -1)
 
     _mean = X.mean(dim=2).view(Bs, C, 1, 1)
-    _var = X.var(dim=2) + eps
+    _var = X.var(dim=2) + 1e-5
     _std = _var.sqrt().view(Bs, C, 1, 1)
 
     return _mean, _std
@@ -67,7 +65,9 @@ class FlatFolderDataset(data.Dataset):
         self.transform_test = torchvision.transforms.Compose([
             torchvision.transforms.Resize(size),
             torchvision.transforms.CenterCrop(size),
+            torchvision.transforms.RandomHorizontalFlip(1),
             torchvision.transforms.ToTensor(),
+            torchvision.transforms.ConvertImageDtype(torch.float16)
         ])
     
         self.dir = _dir
