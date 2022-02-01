@@ -99,6 +99,8 @@ def camera_feed():
 
     cv2.namedWindow("window", cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty("window",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+    change_each = 30
+    until_change = change_each
 
     with torch.cuda.amp.autocast() and torch.no_grad():
         style_len = len(custom_style_dataset)
@@ -118,17 +120,21 @@ def camera_feed():
             # Display the resulting frame
             cv2.imshow('window', np.hstack((frame.permute(1, 2, 0).float().numpy(), out[0, [2, 1, 0]].permute(1, 2, 0).float().cpu().numpy(), style_np)))
 
+            # Loop through styles
+            until_change -= 1
+
             k = cv2.waitKey(33)
             #Waits for a user input to quit the application
             if k == ord('q'):
                 break
-            elif k == ord('a'):
+            elif k == ord('a') or not until_change:
                 if (style_index - 1 >= 0):
                     style_index -= 1
                 else:
                     style_index = style_len - 1
                 style = torch.unsqueeze(custom_style_dataset.__getitem__(style_index, False), 0).to(env.device).half()
                 style_np = cv2.resize(cv2.cvtColor(style[0].permute(1, 2, 0).float().cpu().numpy(), cv2.COLOR_BGR2RGB), (CONTENT_SIZE, CONTENT_SIZE), fx=2.5, fy=2.5)
+                until_change = change_each
 
             elif k == ord('d'):
                 if (style_index + 1 < style_len):
