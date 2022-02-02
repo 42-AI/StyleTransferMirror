@@ -78,9 +78,9 @@ if start_iteration != 0:
     env.load_save(f"model_save/{str(start_iteration).zfill(6)}.pt")
 
 
-CONTENT_SIZE = 512
+CONTENT_SIZE = 720
 # Use custom style folder to display sample data
-custom_style_dataset = FlatFolderDataset("custom_style/", 384)
+custom_style_dataset = FlatFolderDataset("custom_style/", 512)
 cam_transform = FlatFolderDataset("custom_style/", CONTENT_SIZE)
 
 def camera_feed():
@@ -101,6 +101,10 @@ def camera_feed():
     cv2.setWindowProperty("window",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
     change_each = 30
     until_change = change_each
+    i = 0
+    
+    # To save or not
+    save = False
 
     with torch.cuda.amp.autocast() and torch.no_grad():
         style_len = len(custom_style_dataset)
@@ -117,11 +121,22 @@ def camera_feed():
             frame = cam_transform.transform_test(Image.fromarray(frame))
             out = env.network(torch.unsqueeze(frame.to(env.device), 0), style, train=False)
 
-            # Display the resulting frame
-            cv2.imshow('window', np.hstack((frame.permute(1, 2, 0).float().numpy(), out[0, [2, 1, 0]].permute(1, 2, 0).float().cpu().numpy(), style_np)))
+            res =  np.vstack((style_np, frame.permute(1, 2, 0).float().numpy()))
+            w, h, c = res.shape
+            res = cv2.resize(res, (0, 0), fx=0.5, fy=0.5)
+            res = np.hstack((res, out[0, [2, 1, 0]].permute(1, 2, 0).float().cpu().numpy()))
 
+
+            # Display the resulting frame
+            cv2.imshow('window', res)
+
+            if save:
+                # Save Frame by Frame into disk using imwrite method
+                cv2.imwrite('vid/Frame'+str(i)+'.jpg', res * 255.0)
+            
             # Loop through styles
             until_change -= 1
+            i += 1
 
             k = cv2.waitKey(33)
             #Waits for a user input to quit the application
