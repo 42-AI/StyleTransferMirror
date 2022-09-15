@@ -26,5 +26,4 @@ You can see some results here :
 
 ![results](./results.png)
 
-and a live video here : 
-![live style transfer](https://youtu.be/MJZUUvjVgtY)
+and a video of the style transfer mirror [here](https://youtu.be/MJZUUvjVgtY)
