@@ -25,3 +25,6 @@ Finally use the `train.ipynb`
 You can see some results here :
 
 ![results](./results.png)
+
+and a live video here : 
+![live style transfer](https://youtu.be/MJZUUvjVgtY)
