@@ -14,6 +14,11 @@ To train with the same data as the pretrain network, or to train more,
 ```
 sh download_utils.sh
 ```
+and download the pretrain weight at this adresse :
+https://drive.google.com/file/d/1Yd6FSHbEDzzZB8on9xJe7dSC8omOG6OE/view?usp=sharing
+
+Put this weight on the `model_save` folder.
+
 Then unzip `wikiart.zip` and `train2017.zip`. 
 
 Move the images to the folders, respectively, `style` and `content`
